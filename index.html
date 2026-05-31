@@ -9,19 +9,35 @@
     <style>
         :root { --bg: #121212; --card: #1e1e1e; --primary: #bb86fc; --text: #ffffff; --text-muted: #aaaaaa; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; padding-bottom: 80px; -webkit-tap-highlight-color: transparent;}
+        
         .header { text-align: center; margin-bottom: 25px; margin-top: 10px; }
         .header h1 { margin: 0; color: var(--primary); font-size: 2em;}
+        
         .day-selector { display: flex; overflow-x: auto; gap: 12px; padding-bottom: 10px; margin-bottom: 20px; scrollbar-width: none; }
         .day-selector::-webkit-scrollbar { display: none; }
         .day-btn { background: var(--card); color: var(--text-muted); padding: 10px 18px; border-radius: 20px; white-space: nowrap; cursor: pointer; font-weight: 600; font-size: 0.95em; transition: 0.2s;}
         .day-btn.active { background: var(--primary); color: #121212; box-shadow: 0 0 10px rgba(187, 134, 252, 0.4); }
+        
         .exercise-card { background: var(--card); border-radius: 16px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .ex-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .ex-title { font-size: 1.15em; font-weight: 700; margin: 0 0 4px 0; letter-spacing: 0.5px;}
         .ex-reps { color: var(--text-muted); font-size: 0.9em; margin: 0; }
-        .sets-container { display: flex; gap: 12px; margin-top: 15px; }
+        
+        .sets-container { display: flex; gap: 12px; margin-top: 15px; flex-wrap: wrap;}
         .set-circle { width: 45px; height: 45px; border-radius: 50%; border: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 1.1em; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease-in-out; background: #2a2a2a;}
         .set-circle.completed { background: var(--primary); border-color: var(--primary); color: #121212; font-weight: bold; transform: scale(1.05);}
+        
+        /* Calendar Styles */
+        .calendar-container { background: var(--card); border-radius: 16px; padding: 18px; margin-top: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .cal-title { font-size: 1.2em; font-weight: 700; margin: 0; }
+        .cal-month { color: var(--primary); font-weight: 600; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; }
+        .cal-day-name { font-size: 0.75em; color: var(--text-muted); padding-bottom: 5px; font-weight: bold;}
+        .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 0.9em; border-radius: 8px; background: #2a2a2a; color: var(--text-muted); font-weight: 500;}
+        .cal-day.empty { background: transparent; }
+        .cal-day.completed { background: var(--primary); color: #121212; font-weight: bold; box-shadow: 0 0 8px rgba(187, 134, 252, 0.4); }
+        .cal-day.today { border: 2px solid var(--primary); }
     </style>
 </head>
 <body>
@@ -31,11 +47,23 @@
     </div>
     
     <div class="day-selector" id="day-selector"></div>
-    <h2 id="muscle-group" style="text-align: left; margin-bottom: 15px; font-weight: 600; font-size: 1.3em; color: #e0e0e0;"></h2>
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;">
+        <h2 id="muscle-group" style="margin: 0; font-weight: 600; font-size: 1.3em; color: #e0e0e0;"></h2>
+        <button onclick="clearToday()" style="background: transparent; border: 1px solid #333; color: var(--text-muted); padding: 5px 10px; border-radius: 6px; font-size: 0.8em; cursor: pointer;">Reset Day</button>
+    </div>
+    
     <div id="workout-list"></div>
 
+    <div class="calendar-container">
+        <div class="cal-header">
+            <p class="cal-title">Consistency</p>
+            <p class="cal-month" id="cal-month-label"></p>
+        </div>
+        <div class="cal-grid" id="cal-grid">
+            </div>
+    </div>
+
     <script>
-        // Register the Service Worker for Offline Mode
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
         }
@@ -52,11 +80,19 @@
 
         let selectedDay = new Date().getDay();
         let progressData = JSON.parse(localStorage.getItem('gymData2')) || {};
+        let historyData = JSON.parse(localStorage.getItem('gymHistory')) || {};
+
+        // Helper to get local YYYY-MM-DD
+        function getLocalISODate(date) {
+            const offset = date.getTimezoneOffset() * 60000;
+            return new Date(date.getTime() - offset).toISOString().split('T')[0];
+        }
 
         function init() {
             document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
             renderDays();
             renderWorkout(selectedDay);
+            renderCalendar();
         }
 
         function renderDays() {
@@ -73,7 +109,6 @@
                 };
                 container.appendChild(btn);
             });
-            // Auto-scroll to current day
             const activeBtn = container.querySelector('.active');
             if(activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
         }
@@ -85,7 +120,7 @@
             list.innerHTML = '';
 
             if (routine.exercises.length === 0) {
-                list.innerHTML = `<div style="text-align:center; padding: 50px 20px; color: var(--text-muted); font-size: 1.1em;">Take a break. Recovery is when the muscle actually grows.</div>`;
+                list.innerHTML = `<div style="text-align:center; padding: 40px 20px; color: var(--text-muted); font-size: 1.05em; background: var(--card); border-radius: 16px;">Take a break. Recovery is when the muscle actually grows.</div>`;
                 return;
             }
 
@@ -120,10 +155,91 @@
             } else {
                 progressData[key] = true;
                 element.classList.add('completed');
-                // Haptic feedback if supported by device
                 if (navigator.vibrate) navigator.vibrate(50);
             }
             localStorage.setItem('gymData2', JSON.stringify(progressData));
+            checkDailyCompletion(dayId);
+        }
+
+        function checkDailyCompletion(dayId) {
+            // Only record history if they are completing the workout *today*
+            if (dayId !== new Date().getDay()) return; 
+
+            const routine = routines.find(r => r.id === dayId);
+            if (routine.exercises.length === 0) return;
+
+            let totalSets = 0;
+            let completedSets = 0;
+
+            routine.exercises.forEach((ex, exIndex) => {
+                totalSets += ex.sets;
+                for(let i=1; i<=ex.sets; i++) {
+                    if(progressData[`${dayId}-${exIndex}-${i}`]) completedSets++;
+                }
+            });
+
+            const todayStr = getLocalISODate(new Date());
+
+            if (totalSets > 0 && totalSets === completedSets) {
+                historyData[todayStr] = true;
+            } else {
+                delete historyData[todayStr];
+            }
+            
+            localStorage.setItem('gymHistory', JSON.stringify(historyData));
+            renderCalendar();
+        }
+
+        function clearToday() {
+            if(confirm("Reset all checkboxes for this day?")) {
+                const keys = Object.keys(progressData);
+                keys.forEach(k => { if(k.startsWith(selectedDay + '-')) delete progressData[k]; });
+                localStorage.setItem('gymData2', JSON.stringify(progressData));
+                
+                if (selectedDay === new Date().getDay()) {
+                    delete historyData[getLocalISODate(new Date())];
+                    localStorage.setItem('gymHistory', JSON.stringify(historyData));
+                }
+                
+                renderWorkout(selectedDay);
+                renderCalendar();
+            }
+        }
+
+        function renderCalendar() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('cal-month-label').innerText = `${monthNames[month]} ${year}`;
+
+            const grid = document.getElementById('cal-grid');
+            grid.innerHTML = `
+                <div class="cal-day-name">S</div><div class="cal-day-name">M</div><div class="cal-day-name">T</div>
+                <div class="cal-day-name">W</div><div class="cal-day-name">T</div><div class="cal-day-name">F</div><div class="cal-day-name">S</div>
+            `;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const todayStr = getLocalISODate(now);
+
+            // Empty slots before the 1st
+            for (let i = 0; i < firstDay; i++) {
+                grid.innerHTML += `<div class="cal-day empty"></div>`;
+            }
+
+            // Actual days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateObj = new Date(year, month, day);
+                const dateStr = getLocalISODate(dateObj);
+                
+                let classes = "cal-day";
+                if (dateStr === todayStr) classes += " today";
+                if (historyData[dateStr]) classes += " completed";
+
+                grid.innerHTML += `<div class="${classes}">${day}</div>`;
+            }
         }
 
         init();
