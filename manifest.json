@@ -1,0 +1,15 @@
+{
+  "name": "Gym Tracker",
+  "short_name": "Gym",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2964/2964514.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
