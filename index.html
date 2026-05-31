@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gym Tracker</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background-color: #121212; color: #ffffff; padding: 20px; margin: 0; }
+        h1 { color: #bb86fc; text-align: center; }
+        h2 { text-align: center; color: #aaaaaa; font-weight: normal; margin-top: -10px;}
+        .exercise-card { background: #1e1e1e; border-radius: 10px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .exercise-info { flex-grow: 1; padding-left: 15px; }
+        .exercise-name { font-size: 1.1em; font-weight: bold; margin: 0 0 5px 0; }
+        .exercise-reps { color: #aaaaaa; margin: 0; font-size: 0.9em; }
+        .checkbox { transform: scale(1.8); margin-right: 10px; accent-color: #bb86fc; }
+        .placeholder-img { width: 60px; height: 60px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.7em; color: #777; text-align: center;}
+        button { background: #bb86fc; color: #121212; border: none; padding: 15px; width: 100%; font-size: 1.1em; font-weight: bold; border-radius: 8px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1 id="day-title">Loading...</h1>
+    <h2 id="muscle-title"></h2>
+
+    <div id="workout-list"></div>
+
+    <button onclick="clearProgress()">Reset Today's Progress</button>
+
+    <script>
+        const routines = {
+            0: { day: "Sunday", muscle: "Chest", exercises: [ {name: "Push Ups", reps: "3 sets to failure"}, {name: "Bench Presses", reps: "3 sets of 10-12"}, {name: "Incline Dumbbell Presses", reps: "3 sets of 10-12"}, {name: "Cable Crossovers", reps: "3 sets of 12"} ]},
+            1: { day: "Monday", muscle: "Back", exercises: [ {name: "Deadlifts", reps: "3 sets of 8-10"}, {name: "Chin Up's", reps: "3 sets of 10-12"}, {name: "Lat Pull Downs", reps: "3 sets of 10-12"}, {name: "Seated Row's", reps: "3 sets of 12"} ]},
+            2: { day: "Tuesday", muscle: "Legs", exercises: [ {name: "Squats", reps: "3 sets of 10-12"}, {name: "Angled Leg Presses", reps: "3 sets of 10-12"}, {name: "Leg Extension's", reps: "3 sets of 12"}, {name: "Leg Curls", reps: "3 sets of 12"} ]},
+            3: { day: "Wednesday", muscle: "Shoulders", exercises: [ {name: "Seated Dumbbell Presses", reps: "3 sets of 10-12"}, {name: "Lateral Raises", reps: "3 sets of 12-15"}, {name: "Front Raises", reps: "3 sets of 12"}, {name: "Back Presses", reps: "3 sets of 12"} ]},
+            4: { day: "Thursday", muscle: "Arms", exercises: [ {name: "Triceps Dip's", reps: "3 sets of 10-12"}, {name: "Barbell Curl's", reps: "3 sets of 10-12"}, {name: "Triceps Pushdown", reps: "3 sets of 12"}, {name: "Hammer Curl's", reps: "3 sets of 12"} ]},
+            5: { day: "Friday", muscle: "Rest Day", exercises: [] },
+            6: { day: "Saturday", muscle: "Rest Day", exercises: [] }
+        };
+
+        const today = new Date().getDay(); // 0 is Sunday, 1 is Monday, etc.
+        const currentRoutine = routines[today];
+        const storageKey = `gym_progress_${today}`;
+
+        document.getElementById('day-title').innerText = currentRoutine.day;
+        document.getElementById('muscle-title').innerText = currentRoutine.muscle;
+
+        const workoutList = document.getElementById('workout-list');
+        
+        // Load saved progress
+        let savedProgress = JSON.parse(localStorage.getItem(storageKey)) || {};
+
+        if (currentRoutine.exercises.length === 0) {
+            workoutList.innerHTML = "<p style='text-align:center;'>Enjoy your rest day!</p>";
+        } else {
+            currentRoutine.exercises.forEach((ex, index) => {
+                const isChecked = savedProgress[index] ? "checked" : "";
+                workoutList.innerHTML += `
+                    <div class="exercise-card">
+                        <input type="checkbox" class="checkbox" id="ex_${index}" onchange="saveProgress(${index})" ${isChecked}>
+                        <div class="placeholder-img">IMG</div>
+                        <div class="exercise-info">
+                            <p class="exercise-name">${ex.name}</p>
+                            <p class="exercise-reps">${ex.reps}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function saveProgress(index) {
+            const checkbox = document.getElementById(`ex_${index}`);
+            savedProgress[index] = checkbox.checked;
+            localStorage.setItem(storageKey, JSON.stringify(savedProgress));
+        }
+
+        function clearProgress() {
+            localStorage.removeItem(storageKey);
+            location.reload();
+        }
+    </script>
+</body>
+</html>
