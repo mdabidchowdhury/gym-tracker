@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gym-tracker-v2'; // Bumped to v2
+const CACHE_NAME = 'gym-tracker-v3'; // Bumped to v2
 const urlsToCache = [
   './',
   './index.html',
