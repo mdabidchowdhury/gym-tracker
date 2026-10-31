@@ -1,15 +1,16 @@
 {
   "name": "Gym Tracker",
   "short_name": "Gym",
+  "description": "Offline home-workout, progression and body-metrics tracker",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#121212",
   "theme_color": "#121212",
   "icons": [
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/2964/2964514.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
